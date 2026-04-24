@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const prisma = require("../lib/prisma");
-const e = require("express");
+const isOwner = require("../middleware/isOwner");
+const authenticate = require("../middleware/auth");
+router.use(authenticate);
+
 
 // GET /api/questions, /api/questions?keyword=Helsinki
 router.get("/", async (req, res) => {
@@ -47,6 +50,7 @@ router.post("/", async (req, res) => {
         data: {
             question,
             answer,
+            userId: req.user.id,
             keywords: {
                 connectOrCreate: keywordsArray.map((kw) => ({
                     where: { name: kw },
@@ -62,7 +66,7 @@ router.post("/", async (req, res) => {
 
 
 // PUT /api/questions/:questionid
-router.put("/:questionid", async (req, res) => {
+router.put("/:questionid", isOwner, async (req, res) => {
 const questionId = Number(req.params.questionid);
 const { question, answer, keywords } = req.body;
     
@@ -98,7 +102,7 @@ res.json(updatedQuestion);
 });
 
 // DELETE /api/questions/:questionid
-router.delete("/:questionid",  async (req, res) => {
+router.delete("/:questionid", isOwner, async (req, res) => {
     const questionId = Number(req.params.questionid);
     const question = await prisma.question.findUnique({
         where: { id: questionId },
@@ -115,7 +119,7 @@ router.delete("/:questionid",  async (req, res) => {
     });
 
     res.json({"msg": "Question deleted succesfully",
-        question: existingQuestion
+        question: question
     });
 });
 
