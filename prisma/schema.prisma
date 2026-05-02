@@ -14,10 +14,8 @@ model User {
   password String @db.VarChar(255)
   name     String @db.VarChar(100)
   questions    Question[]
+  attempt  Attempt[]
 }
-
-
-
 
 
 model Question {
@@ -25,8 +23,11 @@ model Question {
   question String    @db.VarChar(255)
   answer   String    @db.Text
   keywords Keyword[]
-userId   Int
+  date     DateTime  @default(now())
+  imageUrl String?  @db.VarChar(255)
+  userId   Int
   user     User @relation(fields: [userId], references: [id])
+    attempt  Attempt[]
   @@map("questions")
 }
 
@@ -34,8 +35,17 @@ model Keyword {
   id    Int    @id @default(autoincrement())
   name  String @unique @db.VarChar(100)
   questions Question[]
-
   @@map("keywords")
 }
 
-
+model Attempt {
+  id    Int   @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  userAnswer String   @db.Text
+  correct   Boolean
+  userId  Int
+  user    User @relation(fields: [userId], references: [id])
+  questionId    Int
+  question      Question    @relation(fields: [questionId], references: [id])
+  @@map("attempts")
+}

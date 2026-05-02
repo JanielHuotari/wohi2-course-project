@@ -1,9 +1,9 @@
 const prisma = require("../lib/prisma");
 
 async function isOwner(req, res, next) {
-    const id = Number(req.params.questionId);
-    const record = await req.prisma.question.findUnique({
-         where: {id},
+    const QuestionId = Number(req.params.questionid);
+    const question = await prisma.question.findUnique({
+         where: {id: QuestionId},
         include: {keywords: true}
     });
     if (!question) {
