@@ -1,5 +1,9 @@
 const prisma = require("../lib/prisma");
 
+const {NotFoundError} = require("../lib/errors");
+
+const {ForbiddenError} = require("../lib/errors");
+
 async function isOwner(req, res, next) {
     const QuestionId = Number(req.params.questionid);
     const question = await prisma.question.findUnique({
@@ -7,10 +11,10 @@ async function isOwner(req, res, next) {
         include: {keywords: true}
     });
     if (!question) {
-        return res.status(404).json({ message: "Question not found" });
+        throw new NotFoundError("Question not found");
     }
     if (question.userId !== req.user.id) {
-        return res.status(403).json({ error: "You can only modify your own questions" });
+        throw new ForbiddenError("You can only modify your own questions");
     }
 
     req.question = question;

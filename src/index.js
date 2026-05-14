@@ -1,38 +1,20 @@
+require("express-async-errors");
+
 const express = require('express');
 
-const app = express();
-
-const questionsRouter = require('./routes/questions');
-
-const authRouter = require('./routes/auth');
-
-const prisma = require('./lib/prisma');
-
-const path = require('path');
+const app = require('./app');
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, "..", "public")));
+const logger = require("./lib/logger");
 
-// Middleware to parse JSON bodies (will be useful in later steps)
-app.use(express.json());
-app.use("/api/questions", questionsRouter);
-app.use("/api/auth", authRouter);
+const prisma = require('./lib/prisma');
 
 
-
-// Health check route
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
-}   );
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  logger.info({port: PORT}, "Server listening");
 });
 
 
