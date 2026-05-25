@@ -5,10 +5,11 @@ const isOwner = require("../middleware/isOwner");
 const authenticate = require("../middleware/auth");
 router.use(authenticate);
 const multer = require("multer");
-const path = require("path");
 const {NotFoundError} = require("../lib/errors");
 const {z} = require("zod");
 const {ValidationError} = require("../lib/errors");
+const {CloudinaryStorage} = require("multer-storage-cloudinary");
+const cloudinary = require("../lib/cloudinary");
 
 
 const PostInput = z.object({
@@ -17,14 +18,14 @@ const PostInput = z.object({
     keywords: z.union([z.string(), z.array(z.string())]).optional()
 });
 
-const storage = multer.diskStorage({
-    destination: path.join(__dirname,"..","..","public","uploads"),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const newname = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
-        cb(null, newname);
-    }
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: "quiz-images",
+        allowed_formats: ["jpg", "jpeg", "png"],
+    }  
 });
+ 
 
 const upload = multer({
     storage,
@@ -110,7 +111,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     const keywordsArray = Array.isArray(keywords) ? keywords : [];
 
-const imageUrl = req.file ? `/uploads/${req.file.filename}`:null;
+const imageUrl = req.file ? req.file.path : null;
 
     const newQuestion = await prisma.question.create({
         data: {
@@ -148,7 +149,7 @@ const existingQuestion = await prisma.question.findUnique({
         throw new ValidationError("Question and answer are required");
     }
    
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const imageUrl = req.file ? req.file.path : null;
 
 const keywordsArray = Array.isArray(keywords) ? keywords : [];
 
