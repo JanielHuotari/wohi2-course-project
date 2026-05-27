@@ -10,6 +10,8 @@ const {z} = require("zod");
 const {ValidationError} = require("../lib/errors");
 const {CloudinaryStorage} = require("multer-storage-cloudinary");
 const cloudinary = require("../lib/cloudinary");
+const {route} = require("express/lib/router");
+const {ConflictError} = require("../lib/errors");
 
 
 const PostInput = z.object({
@@ -90,9 +92,42 @@ res.json({
 })
 });
 
-// GET /api/questions/:questionid
-router.get("/:questionid", async (req, res) => {
-    const questionId = Number(req.params.questionid);
+// GET /api/leaderboard/top
+
+router.get("/leaderboard/top", async (req, res) => {
+    const leaderboard = await prisma.attempt.groupBy({
+        by: ["userId"],
+        where: {
+            correct: true
+        },
+        _count: {
+            id: true
+        },
+        orderBy: {
+            _count: {
+                id: "desc"
+            }
+        },
+        take: 3
+    });
+
+const leaderboardWithUser = await Promise.all(
+    leaderboard.map(async (item, index) => {
+        const user = await prisma.user.findUnique
+        ({ where: {id: item.userId} });
+        return {rank: index + 1,
+            userName: user.name,
+            correctAnswers: item._count.id
+        };
+    })
+);
+res.json(leaderboardWithUser);
+});
+
+
+    // GET /api/questions/:questionid
+    router.get("/:questionid", async (req, res) => {
+        const questionId = Number(req.params.questionid);
     const question = await prisma.question.findUnique({
         where: { id: questionId },
         include: { keywords: true, user: true }
@@ -108,6 +143,13 @@ router.get("/:questionid", async (req, res) => {
 router.post("/", upload.single("image"), async (req, res) => {
     const { question, answer, keywords } = PostInput.parse(req.body);
 
+    const existingQuestion = await prisma.question.findFirst({
+        where: {question:question}
+    });
+
+    if (existingQuestion) {
+        throw new ConflictError("Question already exists");
+    }
 
     const keywordsArray = Array.isArray(keywords) ? keywords : [];
 
@@ -142,8 +184,10 @@ const existingQuestion = await prisma.question.findUnique({
         where: { id: questionId }
     });
 
+
     if (!existingQuestion) {
-        throw new NotFoundError("Question not found");}
+        throw new NotFoundError("Question not found");
+    }
 
     if(!question || !answer) {
         throw new ValidationError("Question and answer are required");
@@ -238,7 +282,6 @@ router.post("/:questionid/play", async (req, res) => {
         correctAnswer: question.answer
     });
 });
-
 
 
 module.exports = router;
